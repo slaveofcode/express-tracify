@@ -5,6 +5,9 @@ import {
   TracingConfig,
   TracingOptions,
 } from 'jaeger-client'
+import {
+  middleware,
+} from './middlewares'
 
 interface ITracerOpts {
   config?: TracingConfig,
@@ -15,14 +18,21 @@ interface IConfig {
   tracer?: ITracerOpts
 }
 
+let initCalled = false
+
 const Init = (cfg?: IConfig): JaegerTracer => {
   const cfgTracer = cfg?.tracer?.config || {}
   const optTracer = cfg?.tracer?.options || {}
   const tracer = initTracerFromEnv(cfgTracer, optTracer)
   initGlobalTracer(tracer)
+  initCalled = true
   return tracer
 }
 
-export {
+const isInit = () => initCalled
+
+export default {
   Init,
+  isInit,
+  Traceify: middleware,
 }
