@@ -50,7 +50,7 @@ interface IMiddlewareConfig {
 
 const middleware = (cfg?: IMiddlewareConfig) => {
   if (!isInit()) {
-    throw new Error('You have to set `Init()` before use the middleware')
+    throw new Error('You have to set `Init()` before using the middleware')
   }
 
   return (req: Request, res: Response, next: NextFunction) => {
