@@ -1,10 +1,10 @@
 import { Request, Response } from 'express'
 import { Tags } from 'opentracing'
 import Rewire from 'rewire'
-import { Init } from '.'
+import Main from '.'
 import { middleware } from './middlewares'
 
-
+const { Init } = Main
 
 const mockRequest = () => {
   return {
@@ -23,10 +23,11 @@ const mockResponse = () => {
 
 test('Middleware should throw error when no tracer initialized', () => {
   const fn = () => middleware()
-  expect(fn).toThrowError('You have to set `Init()` before use the middleware')
+  expect(fn).toThrowError('You have to set `Init()` before using the middleware')
 })
 
 test('Middleware should return valid express middleware', () => {
+
   Init({
     tracer: {
       config: {

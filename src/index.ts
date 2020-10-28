@@ -7,6 +7,7 @@ import {
 } from 'jaeger-client'
 import {
   middleware,
+  errMiddlewareWrapper,
 } from './middlewares'
 
 interface ITracerOpts {
@@ -34,5 +35,8 @@ const isInit = () => initCalled
 export default {
   Init,
   isInit,
-  Traceify: middleware,
+  Traceify: {
+    Middleware: middleware,
+    ErrMiddlewareWrapper: errMiddlewareWrapper,
+  },
 }

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { globalTracer, FORMAT_HTTP_HEADERS, Span, Tags } from 'opentracing'
 import { IncomingHttpHeaders } from 'http'
-import { isInit } from '.'
+import Main from '.'
 
 const ERR_STATUS_CODE = 400
 
@@ -42,6 +42,7 @@ const makeFinish = (span: Span, req: Request, res: Response, errResolver?: IErro
 }
 
 type IErrorResolverFn = (req: any, res: any) => boolean
+type IErrorMiddlewareFn = (err: Error, req: Request, res: Response, next: NextFunction) => void
 
 interface IMiddlewareConfig {
   injectResponseHeader?: boolean
@@ -49,7 +50,7 @@ interface IMiddlewareConfig {
 }
 
 const middleware = (cfg?: IMiddlewareConfig) => {
-  if (!isInit()) {
+  if (!Main.isInit()) {
     throw new Error('You have to set `Init()` before using the middleware')
   }
 
@@ -88,10 +89,24 @@ const middleware = (cfg?: IMiddlewareConfig) => {
   }
 }
 
-// tslint:disable-next-line: no-empty
-const errMiddleware = (_err: any, _req: Request, _res: Response, _next: NextFunction) => { }
+const errMiddlewareWrapper = (errMiddlewareFn: IErrorMiddlewareFn) => {
+  return (err: any, req: Request, res: Response, next: NextFunction) => {
+    const { opentracing } = req as any
+    if (Main.isInit() && opentracing.span && opentracing.span instanceof Span) {
+      const { span } = opentracing
+      span.setTag(Tags.SAMPLING_PRIORITY, 1)
+      span.setTag(Tags.ERROR, true)
+      span.log({
+          event: 'error',
+          message: err.message || '',
+      })
+      span.finish()
+    }
+    return errMiddlewareFn.call(null, err, req, res, next)
+  }
+}
 
 export {
   middleware,
-  errMiddleware,
+  errMiddlewareWrapper,
 }
