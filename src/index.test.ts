@@ -1,11 +1,15 @@
 import { initTracer } from 'jaeger-client'
 import { globalTracer } from 'opentracing'
-import { Init } from '.'
+import Main from '.'
+
+const { Init } = Main
 
 beforeEach(() => {
   delete process.env.JAEGER_SERVICE_NAME
   delete process.env.JAEGER_SAMPLER_TYPE
   delete process.env.JAEGER_SAMPLER_PARAM
+
+  jest.resetModules()
 })
 
 test('Init should throw when no ENV setup', () => {
@@ -82,4 +86,16 @@ test('Init should respect the creation of the new Tracer via direct config', () 
 
   expect((tracer as any)._serviceName).toEqual('test')
   expect((tracer as any)._sampler._name).toEqual('ProbabilisticSampler')
+})
+
+test('Init status should be changed once initialized', () => {
+  process.env.JAEGER_SERVICE_NAME = 'test'
+
+  const M = jest.requireActual('./index').default
+
+  expect(M.isInit()).toEqual(false)
+
+  M.Init()
+
+  expect(M.isInit()).toEqual(true)
 })

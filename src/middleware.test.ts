@@ -1,10 +1,10 @@
-import { Request, Response } from 'express'
-import { Tags } from 'opentracing'
+import { Request, Response, NextFunction } from 'express'
+import { Span, Tags } from 'opentracing'
 import Rewire from 'rewire'
-import { Init } from '.'
+import Main from '.'
 import { middleware } from './middlewares'
 
-
+const { Init } = Main
 
 const mockRequest = () => {
   return {
@@ -23,10 +23,11 @@ const mockResponse = () => {
 
 test('Middleware should throw error when no tracer initialized', () => {
   const fn = () => middleware()
-  expect(fn).toThrowError('You have to set `Init()` before use the middleware')
+  expect(fn).toThrowError('You have to set `Init()` before using the middleware')
 })
 
 test('Middleware should return valid express middleware', () => {
+
   Init({
     tracer: {
       config: {
@@ -60,7 +61,7 @@ test('makeFinish should able to set state span finished', () => {
   expect(mockSpan.finish).toHaveBeenCalled()
   expect(mockSpan.setTag).toHaveBeenCalledWith(Tags.HTTP_STATUS_CODE, 200)
   expect(mockSpan.log).toHaveBeenCalledWith({
-    event: 'request-ended',
+    event: 'request_ended',
   })
 })
 
@@ -85,4 +86,41 @@ test('makeFinish should able to set error state span', () => {
     event: 'error.status_message',
     message: 'Bad Request',
   })
+})
+
+test('Error middleware should able to wrap within error middleware', () => {
+  const { errMiddlewareWrapper } = jest.requireActual('./middlewares')
+  jest.spyOn(Main, 'isInit').mockReturnValue(true)
+
+  const err = new Error('test')
+  const mockedRes = mockResponse()
+  const mockedNext = jest.fn()
+  const mockedSpan: any = Object.assign(Object.create(Span.prototype), { // mocking "instanceof" object
+    setTag: jest.fn(),
+    finish: jest.fn(),
+    log: jest.fn(),
+  })
+
+  const mockedReq = {
+    opentracing: {
+      span: mockedSpan,
+    },
+  }
+
+  const errImplFn = jest.fn()
+  errMiddlewareWrapper(errImplFn)(err, mockedReq, mockedRes, mockedNext as unknown as NextFunction)
+
+  expect(errImplFn).toBeCalled()
+  expect(errImplFn).toHaveBeenCalledWith(err, mockedReq, mockedRes, mockedNext)
+  expect(mockedSpan.setTag).toHaveBeenCalledTimes(2)
+  expect(mockedSpan.setTag).toHaveBeenNthCalledWith(1, Tags.SAMPLING_PRIORITY, 1)
+  expect(mockedSpan.setTag).toHaveBeenNthCalledWith(2, Tags.ERROR, true)
+  expect(mockedSpan.log).toHaveBeenNthCalledWith(1, {
+    event: 'error.message',
+    message: err.message,
+  })
+  expect(mockedSpan.log).toHaveBeenNthCalledWith(2, {
+    event: 'request_ended',
+  })
+  expect(mockedSpan.finish).toHaveBeenCalled()
 })
