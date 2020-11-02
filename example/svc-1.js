@@ -59,7 +59,9 @@ const Home = WrapHandler(async function(req, res) {
   })
 }, 'Home Handler')
 
-app.get('/', Home)
+app.get('/', WrapHandler(function(_, _, next) {
+  return hitUserCounter().then(() => next())
+}, 'IndexHomeMiddleware'), Home)
 app.get('/home', Home)
 app.get('/listing', WrapHandler((req, res) => {
   res.json({
@@ -70,7 +72,7 @@ app.get('/listing', WrapHandler((req, res) => {
 app.use(ErrMiddlewareWrapper((err, _, res) => {
   return res.status(500).json({
     error: true,
-    message: 'Something Wrong:' + err.message
+    message: 'Something Wrong: ' + (err.message || err),
   })
 }))
 

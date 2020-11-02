@@ -34,11 +34,26 @@ const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 const sleepExec = (milis, fn) => new Promise((res, rej) => setTimeout(() => res(fn()), milis))
 
 const getFromInventoryA = async function() {
+  const span = this.startSpan('subProcess')
+  span.log({
+    event: 'subProcess',
+    message: 'create new child span'
+  })
+
+  await sleepExec(200, () => {})
+
+  // must call finish manually
+  span.finish()
+
   return await sleepExec(randInt(100, 5000), () => ['T-Shirt', 'Black Shoes'])
 }
 
 const getFromInventoryB = async function() {
-  return await sleepExec(randInt(100, 5000), () => ['Jacket', 'Hoodie'])
+  this.getSpan().log({
+    event: 'getFromInventoryB.log',
+    message: 'Some information to be displayed'
+  })
+  return await sleepExec(randInt(10, 300), () => ['Jacket', 'Hoodie'])
 }
 
 const getListProducts = async function() {
@@ -68,7 +83,7 @@ app.get('/products', ListProducts)
 app.use(ErrMiddlewareWrapper((err, _, res) => {
   return res.status(500).json({
     error: true,
-    message: 'Something Wrong:' + err.message
+    message: 'Something Wrong: ' + (err.message || err),
   })
 }))
 
