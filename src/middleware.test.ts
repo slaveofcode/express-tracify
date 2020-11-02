@@ -124,3 +124,24 @@ test('Error middleware should able to wrap within error middleware', () => {
   })
   expect(mockedSpan.finish).toHaveBeenCalled()
 })
+
+test('spanSafeFinish should be able to detect finish calling before', () => {
+  const m = Rewire('./middlewares')
+  const spanSafeFinish = m.__get__('spanSafeFinish')
+
+  const mockedSpan1 = {
+    _duration: 0,
+    finish: jest.fn(),
+  }
+
+  const mockedSpan2 = {
+    _duration: 1,
+    finish: jest.fn(),
+  }
+
+  spanSafeFinish(mockedSpan1)
+  spanSafeFinish(mockedSpan2)
+
+  expect(mockedSpan1.finish).toHaveBeenCalledTimes(1)
+  expect(mockedSpan2.finish).toHaveBeenCalledTimes(0)
+})
