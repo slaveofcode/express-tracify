@@ -35,9 +35,9 @@ const makeFinish = (span: Span, req: Request, res: Response, errResolver?: IErro
 
     span.setTag(Tags.HTTP_STATUS_CODE, res.statusCode)
     span.log({
-      event: 'request-ended',
+      event: 'request_ended',
     })
-    span.finish()
+    spanSafeFinish(span)
   }
 }
 
@@ -59,7 +59,7 @@ const middleware = (cfg?: IMiddlewareConfig) => {
     res.on('finish', makeFinish(span, req, res, cfg?.errorResolverFn))
 
     span.log({
-      event: 'request-started',
+      event: 'request_started',
     })
 
     span.addTags({
@@ -97,12 +97,22 @@ const errMiddlewareWrapper = (errMiddlewareFn: IErrorMiddlewareFn) => {
       span.setTag(Tags.SAMPLING_PRIORITY, 1)
       span.setTag(Tags.ERROR, true)
       span.log({
-          event: 'error',
+          event: 'error.message',
           message: err.message || '',
       })
-      span.finish()
+      span.log({
+        event: 'request_ended',
+      })
+
+      spanSafeFinish(span)
     }
     return errMiddlewareFn.call(null, err, req, res, next)
+  }
+}
+
+const spanSafeFinish = (span: Span) => {
+  if (!(span as any)._duration) {
+    span.finish()
   }
 }
 
