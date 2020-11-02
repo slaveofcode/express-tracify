@@ -6,8 +6,8 @@ import {
   TracingOptions,
 } from 'jaeger-client'
 import {
-  middleware,
-  errMiddlewareWrapper,
+  middleware as Middleware,
+  errMiddlewareWrapper as ErrMiddlewareWrapper,
 } from './middlewares'
 import { WrapHandler } from './tracer_wrapper'
 
@@ -33,12 +33,10 @@ const Init = (cfg?: IConfig): JaegerTracer => {
 
 const isInit = () => initCalled
 
-export default {
+export {
   Init,
   isInit,
-  Traceify: {
-    Middleware: middleware,
-    ErrMiddlewareWrapper: errMiddlewareWrapper,
-  },
+  Middleware,
+  ErrMiddlewareWrapper,
   WrapHandler,
 }

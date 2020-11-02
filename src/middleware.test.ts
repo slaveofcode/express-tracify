@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { Span, Tags } from 'opentracing'
 import Rewire from 'rewire'
-import Main from '.'
+import * as Main from '.'
 import { middleware } from './middlewares'
 
 const { Init } = Main

@@ -37,7 +37,7 @@ test('finishWithErr should able to finish with set error state span', () => {
   expect(mockSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
   expect(mockSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
   expect(mockSpan.log).toHaveBeenNthCalledWith(1, {
-    event: 'error',
+    event: 'error.message',
     message: 'Something Wrong',
   })
 })
@@ -86,13 +86,26 @@ test('should be able to initialize new TraceWrapper object', () => {
   const m = Rewire('./tracer_wrapper')
   const TracerWrapper = m.__get__('TracerWrapper')
 
-  const mockRequest = {} as unknown as Request
   const mockSpan = {
     context: expect.anything(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockSpan })
+
+  const tw = new TracerWrapper({ span: mockSpan })
 
   expect(tw instanceof TracerWrapper).toEqual(true)
+  expect(tw.getSpan()).toEqual(mockSpan)
+})
+
+test('should be able to create child span from TraceWrapper object', () => {
+  const m = Rewire('./tracer_wrapper')
+  const TracerWrapper = m.__get__('TracerWrapper')
+
+  const mockSpan = {
+    context: jest.fn(),
+  }
+  const tw = new TracerWrapper({ span: mockSpan })
+  const childSpan = tw.startSpan('child')
+  expect(childSpan.constructor.name).toEqual('Span')
 })
 
 test('TraceWrapper.traceFn should be able to trace a regular function', () => {
@@ -111,12 +124,11 @@ test('TraceWrapper.traceFn should be able to trace a regular function', () => {
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     finish: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   // tslint:disable-next-line: no-empty
   const someFunc = () => {}
@@ -132,7 +144,7 @@ test('TraceWrapper.traceFn should be able to trace a regular function', () => {
   expect(typeof tracedSomeFunc).toEqual('function')
   expect(typeof tracedTestFunc).toEqual('function')
   expect(someFunc.apply).toHaveBeenCalled()
-  expect(someFunc.apply).toHaveBeenCalledWith(tw, ['test', 'one'])
+  expect(someFunc.apply).toHaveBeenCalledWith(expect.anything(), ['test', 'one'])
   expect(testFunc).toHaveBeenCalled()
   expect(testFunc).toHaveBeenCalledWith('test', 'one')
   expect(mockGlobTracer.startSpan).toHaveBeenCalled()
@@ -160,14 +172,13 @@ test('TraceWrapper.traceFn should be able to trace a regular function with throw
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     setTag: jest.fn(),
     finish: jest.fn(),
     log: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   const testFunc = jest.fn().mockImplementation((arg1: string) => {
     throw new Error(`Error: ${arg1}`)
@@ -183,7 +194,7 @@ test('TraceWrapper.traceFn should be able to trace a regular function with throw
   expect(mockParentSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
   expect(mockParentSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
   expect(mockParentSpan.log).toHaveBeenNthCalledWith(1, {
-    event: 'error',
+    event: 'error.message',
     message: 'Error: test',
   })
 
@@ -191,7 +202,7 @@ test('TraceWrapper.traceFn should be able to trace a regular function with throw
   expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
   expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
   expect(mockSubFnSpan.log).toHaveBeenNthCalledWith(1, {
-    event: 'error',
+    event: 'error.message',
     message: 'Error: test',
   })
 })
@@ -212,14 +223,13 @@ test('TraceWrapper.traceFn should be able to trace a resolved promise function',
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     setTag: jest.fn(),
     finish: jest.fn(),
     log: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   const testFunc = jest.fn().mockImplementation(
     (arg1: string) => new Promise((res) => res(`Hello ${arg1}`)),
@@ -249,14 +259,13 @@ test('TraceWrapper.traceFn should be able to trace a rejected promise function',
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     setTag: jest.fn(),
     finish: jest.fn(),
     log: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   const wrapErr = () => {
     const tracedTestFunc = tw.traceFn(
