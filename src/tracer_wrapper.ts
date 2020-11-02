@@ -1,11 +1,12 @@
 // tslint:disable: ban-types
-import { types } from 'util'
 import { Request, Response, NextFunction } from 'express'
 import { Span, Tags, globalTracer } from 'opentracing'
 
 const tracer = globalTracer()
 
 type TraceFnArg = [fn: Function, operationName?: string]
+
+const isPromise = (p: any): boolean => Boolean(p && p.then && typeof p.then === 'function')
 
 class TracerWrapper {
   req: Request
@@ -25,17 +26,15 @@ class TracerWrapper {
       })
 
       try {
-        // Node 10.x or later
-        if (types.isAsyncFunction(fn)) {
-          return spanHandlerAsync(span, t, fn, Array.from(arguments))
-        }
-
-        // tslint:disable-next-line: no-console
-        // console.log('args:', ...Array.from(arguments))
         const resp = fn.apply(t, Array.from(arguments))
 
-        if (resp instanceof Promise) {
+        if (isPromise(resp)) {
           return spanHandlerPromise(span, resp)
+            .catch(err => {
+              if (t && t.finishSpanWithErr) {
+                t.finishSpanWithErr(err)
+              }
+            })
         }
 
         spanSafeFinish(span)
@@ -72,18 +71,6 @@ class TracerWrapper {
     }
   }
 }
-
-
-const spanHandlerAsync = (span: Span, parentObj: any, fn: Function, args?: any[] | IArguments) =>
-  fn.call(parentObj, ...(args ? Array.from(args) : []))
-    .then((resp: any) => {
-      spanSafeFinish(span)
-      return resp
-    })
-    .catch((err: Error) => {
-      finishWithErr(err, span)
-      throw err
-    })
 
 const spanHandlerPromise = (span: Span, calledFn: Promise<any>): Promise<any> =>
   calledFn
@@ -148,15 +135,10 @@ const WrapHandler = (h: IMiddlewareFn, operationName: string): IMiddlewareFn => 
         spanSafeFinish(span)
       }]
 
-      // Node 10.x or later
-      if (types.isAsyncFunction(h)) {
-        return spanHandlerAsync(span, parentWrapCaller, h, expressArgs)
-      }
-
       const resp = (h as Function).apply(parentWrapCaller, expressArgs)
 
-      if (res instanceof Promise) {
-        return spanHandlerPromise(span, res)
+      if (isPromise(resp)) {
+        return spanHandlerPromise(span, resp)
       }
 
       spanSafeFinish(span)
