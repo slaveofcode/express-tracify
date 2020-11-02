@@ -9,11 +9,9 @@ type TraceFnArg = [fn: Function, operationName?: string]
 const isPromise = (p: any): boolean => Boolean(p && p.then && typeof p.then === 'function')
 
 class TracerWrapper {
-  req: Request
   parentSpan: Span
 
-  constructor({ req, span }: { req: Request; span: Span }) {
-    this.req = req
+  constructor({ span }: { span: Span }) {
     this.parentSpan = span as Span
   }
 
@@ -25,8 +23,10 @@ class TracerWrapper {
         childOf: t.parentSpan.context(),
       })
 
+      const tracerWrapper = new TracerWrapper({ span })
+
       try {
-        const resp = fn.apply(t, Array.from(arguments))
+        const resp = fn.apply(tracerWrapper, Array.from(arguments))
 
         if (isPromise(resp)) {
           return spanHandlerPromise(span, resp)
@@ -40,11 +40,10 @@ class TracerWrapper {
         spanSafeFinish(span)
         return resp
       } catch (err) {
+        finishWithErr(err, span)
         if (t && t.finishSpanWithErr) {
           t.finishSpanWithErr(err)
         }
-
-        finishWithErr(err, span)
         throw err
       }
     }
@@ -98,9 +97,12 @@ const finishWithErr = (err: Error, span: Span) => {
   span.setTag(Tags.ERROR, true)
   span.setTag(Tags.SAMPLING_PRIORITY, 1)
   span.log({
-    event: 'error',
+    event: 'error.message',
     message: err
-      ? err.message
+      ? (
+        err.message
+          ? err.message
+          : (['string', 'number'].includes(typeof err) ? err : ''))
       : '',
   })
   spanSafeFinish(span)
@@ -111,22 +113,26 @@ type IMiddlewareFn = (req: Request, res: Response, next: NextFunction) => void
 const WrapHandler = (h: IMiddlewareFn, operationName: string): IMiddlewareFn => {
   return (req: Request, res: Response, next: NextFunction) => {
     const fnName = operationName || h.name
+    const rany = (req as any)
+    const middlewareSpan = rany.opentracing && rany.opentracing.span
+      ? rany.opentracing.span
+      : undefined
     const span = tracer.startSpan(fnName, {
-      childOf: ((req as any).tracer && (req as any).tracer.span)
-        ? (req as any).tracer.span.context()
+      childOf: middlewareSpan
+        ? middlewareSpan.context()
         : undefined,
     })
 
     try {
-      const parentWrapCaller = new TracerWrapper({ req, span })
+      const parentWrapCaller = new TracerWrapper({ span })
       const expressArgs = [req, res, (arg: any) => {
         if (arg) {
           span.setTag(Tags.SAMPLING_PRIORITY, 1)
           if (arg instanceof Error) {
             span.setTag(Tags.ERROR, true)
             span.log({
-              event: 'error',
-              message: arg.message,
+              event: 'error.message',
+              message: arg.message || (['string', 'number'].includes(typeof arg) ? arg : ''),
             })
           }
         }
@@ -150,7 +156,6 @@ const WrapHandler = (h: IMiddlewareFn, operationName: string): IMiddlewareFn => 
 
   }
 }
-
 
 export {
   WrapHandler,
