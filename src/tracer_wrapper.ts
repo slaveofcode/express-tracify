@@ -49,6 +49,10 @@ class TracerWrapper {
     }
   }
 
+  getSpan(): Span {
+    return this.parentSpan
+  }
+
   traceFns(fns: TraceFnArg[]): Function[] {
     const tracedFns: Function[] = []
     for (const [fn, operationName] of fns) {

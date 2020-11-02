@@ -86,13 +86,13 @@ test('should be able to initialize new TraceWrapper object', () => {
   const m = Rewire('./tracer_wrapper')
   const TracerWrapper = m.__get__('TracerWrapper')
 
-  const mockRequest = {} as unknown as Request
   const mockSpan = {
     context: expect.anything(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockSpan })
+  const tw = new TracerWrapper({ span: mockSpan })
 
   expect(tw instanceof TracerWrapper).toEqual(true)
+  expect(tw.getSpan()).toEqual(mockSpan)
 })
 
 test('TraceWrapper.traceFn should be able to trace a regular function', () => {
@@ -159,14 +159,13 @@ test('TraceWrapper.traceFn should be able to trace a regular function with throw
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     setTag: jest.fn(),
     finish: jest.fn(),
     log: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   const testFunc = jest.fn().mockImplementation((arg1: string) => {
     throw new Error(`Error: ${arg1}`)
@@ -211,14 +210,13 @@ test('TraceWrapper.traceFn should be able to trace a resolved promise function',
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     setTag: jest.fn(),
     finish: jest.fn(),
     log: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   const testFunc = jest.fn().mockImplementation(
     (arg1: string) => new Promise((res) => res(`Hello ${arg1}`)),
@@ -248,14 +246,13 @@ test('TraceWrapper.traceFn should be able to trace a rejected promise function',
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     setTag: jest.fn(),
     finish: jest.fn(),
     log: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   const wrapErr = () => {
     const tracedTestFunc = tw.traceFn(
