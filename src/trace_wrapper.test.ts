@@ -82,53 +82,6 @@ test('spanHandlerPromise should able call span finish on rejected promise', () =
   })
 })
 
-test('spanHandlerAsync should able call span finish on resolved async', async () => {
-  const m = Rewire('./tracer_wrapper')
-  const spanHandlerAsync = m.__get__('spanHandlerAsync')
-
-  const mockSpan = {
-    setTag: jest.fn(),
-    finish: jest.fn(),
-    log: jest.fn(),
-  }
-
-  const fnPromise = () => new Promise((res) => res({ succes: true }))
-
-  const fn = async () => {
-    const res = await fnPromise()
-    return res
-  }
-
-  await spanHandlerAsync(mockSpan, null, fn)
-
-  expect(mockSpan.finish).toHaveBeenCalled()
-})
-
-test('spanHandlerAsync should able call span finish on rejected async', async () => {
-  const m = Rewire('./tracer_wrapper')
-  const spanHandlerAsync = m.__get__('spanHandlerAsync')
-
-  const mockSpan = {
-    setTag: jest.fn(),
-    finish: jest.fn(),
-    log: jest.fn(),
-  }
-
-  const fnPromise = () => new Promise((_res, rej) => rej(new Error('Something Wrong')))
-
-  const fn = async () => {
-    const res = await fnPromise()
-    return res
-  }
-
-  try {
-    await spanHandlerAsync(mockSpan, null, fn)
-  } catch (err: any) {
-    expect(err.message).toEqual('Something Wrong')
-    expect(mockSpan.finish).toHaveBeenCalled()
-  }
-})
-
 test('should be able to initialize new TraceWrapper object', () => {
   const m = Rewire('./tracer_wrapper')
   const TracerWrapper = m.__get__('TracerWrapper')
@@ -273,9 +226,63 @@ test('TraceWrapper.traceFn should be able to trace a resolved promise function',
   )
   const tracedTestFunc = tw.traceFn(testFunc, 'testFunc')
 
-  tracedTestFunc('test', 'unusedArg').then((res: string) => {
+  return tracedTestFunc('test', 'unusedArg').then((res: string) => {
     expect(mockSubFnSpan.finish).toHaveBeenCalled()
     expect(res).toEqual('Hello test')
     expect(mockParentSpan.finish).not.toHaveBeenCalled()
+  })
+})
+
+test('TraceWrapper.traceFn should be able to trace a rejected promise function', () => {
+  const m = Rewire('./tracer_wrapper')
+  const TracerWrapper = m.__get__('TracerWrapper')
+
+  const mockSubFnSpan = {
+    setTag: jest.fn(),
+    finish: jest.fn(),
+    log: jest.fn(),
+  }
+
+  const mockGlobTracer = {
+    startSpan: jest.fn().mockReturnValue(mockSubFnSpan),
+  }
+
+  m.__set__('tracer', mockGlobTracer)
+
+  const mockRequest = {} as unknown as Request
+  const mockParentSpan = {
+    context: () => undefined,
+    setTag: jest.fn(),
+    finish: jest.fn(),
+    log: jest.fn(),
+  }
+  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+
+  const wrapErr = () => {
+    const tracedTestFunc = tw.traceFn(
+      (arg1: string) => new Promise((_, rej) => rej(new Error(`Error: ${arg1}`))),
+      'testFunc',
+    )
+
+    return tracedTestFunc('test')
+  }
+
+  return wrapErr().catch((err: Error) => {
+    expect(err.message).toEqual('Error: test')
+    expect(mockSubFnSpan.finish).toHaveBeenCalled()
+    expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
+    expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
+    expect(mockSubFnSpan.log).toHaveBeenNthCalledWith(1, {
+      event: 'error',
+      message: 'Error: test',
+    })
+
+    expect(mockParentSpan.finish).toHaveBeenCalled()
+    expect(mockParentSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
+    expect(mockParentSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
+    expect(mockParentSpan.log).toHaveBeenNthCalledWith(1, {
+      event: 'error',
+      message: 'Error: test',
+    })
   })
 })
