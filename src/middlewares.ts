@@ -106,7 +106,7 @@ const errMiddlewareWrapper = (errMiddlewareFn: IErrorMiddlewareFn) => {
 
       spanSafeFinish(span)
     }
-    return errMiddlewareFn.call(null, err, req, res, next)
+    return errMiddlewareFn.apply(null, [err, req, res, next])
   }
 }
 
