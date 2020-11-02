@@ -1,6 +1,6 @@
 // tslint:disable: ban-types
 import { Request, Response, NextFunction } from 'express'
-import { Span, Tags, globalTracer } from 'opentracing'
+import { Span, Tags, globalTracer, SpanOptions } from 'opentracing'
 
 const tracer = globalTracer()
 
@@ -51,6 +51,15 @@ class TracerWrapper {
 
   getSpan(): Span {
     return this.parentSpan
+  }
+
+  startSpan(operationName: string, options?: SpanOptions): Span {
+    const opts = {
+      ...options,
+      childOf: this.parentSpan.context(),
+    }
+    const span = tracer.startSpan(operationName, opts)
+    return span
   }
 
   traceFns(fns: TraceFnArg[]): Function[] {

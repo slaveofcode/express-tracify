@@ -89,10 +89,23 @@ test('should be able to initialize new TraceWrapper object', () => {
   const mockSpan = {
     context: expect.anything(),
   }
+
   const tw = new TracerWrapper({ span: mockSpan })
 
   expect(tw instanceof TracerWrapper).toEqual(true)
   expect(tw.getSpan()).toEqual(mockSpan)
+})
+
+test('should be able to create child span from TraceWrapper object', () => {
+  const m = Rewire('./tracer_wrapper')
+  const TracerWrapper = m.__get__('TracerWrapper')
+
+  const mockSpan = {
+    context: jest.fn(),
+  }
+  const tw = new TracerWrapper({ span: mockSpan })
+  const childSpan = tw.startSpan('child')
+  expect(childSpan.constructor.name).toEqual('Span')
 })
 
 test('TraceWrapper.traceFn should be able to trace a regular function', () => {
