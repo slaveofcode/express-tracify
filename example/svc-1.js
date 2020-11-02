@@ -30,44 +30,7 @@ Init({
 
 app.use(Middleware())
 
-let counter = 0
-
-const hitUserCounter = () => {
-  return new Promise((res, rej) => {
-    setTimeout(() => {
-      res(++counter)
-    }, 500)
-  })
-}
-
-const getCompanyProfile = () => {
-  return new Promise((res, rej) => {
-    setTimeout(() => {
-      res(`Awesome Company!`)
-    }, 200)
-  })
-}
-
-const Home = WrapHandler(async function(req, res) {
-  const getCompanyProfileT = this.traceFn(getCompanyProfile, 'getCompanyProfile')
-
-  const companyProfile = await getCompanyProfileT()
-
-  res.json({
-    page: 'Home',
-    companyProfile,
-  })
-}, 'Home Handler')
-
-app.get('/', WrapHandler(function(_, _, next) {
-  return hitUserCounter().then(() => next())
-}, 'IndexHomeMiddleware'), Home)
-app.get('/home', Home)
-app.get('/listing', WrapHandler((req, res) => {
-  res.json({
-    page: 'Listing'
-  })
-}, 'Home Handler'))
+app.use(require('./svc-1-handlers'))
 
 app.use(ErrMiddlewareWrapper((err, _, res) => {
   return res.status(500).json({
