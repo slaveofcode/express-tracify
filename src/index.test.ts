@@ -1,6 +1,6 @@
 import { initTracer } from 'jaeger-client'
 import { globalTracer } from 'opentracing'
-import Main from '.'
+import * as Main from '.'
 
 const { Init } = Main
 
@@ -91,7 +91,7 @@ test('Init should respect the creation of the new Tracer via direct config', () 
 test('Init status should be changed once initialized', () => {
   process.env.JAEGER_SERVICE_NAME = 'test'
 
-  const M = jest.requireActual('./index').default
+  const M = jest.requireActual('./index')
 
   expect(M.isInit()).toEqual(false)
 

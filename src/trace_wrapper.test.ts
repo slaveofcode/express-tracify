@@ -37,7 +37,7 @@ test('finishWithErr should able to finish with set error state span', () => {
   expect(mockSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
   expect(mockSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
   expect(mockSpan.log).toHaveBeenNthCalledWith(1, {
-    event: 'error',
+    event: 'error.message',
     message: 'Something Wrong',
   })
 })
@@ -111,12 +111,11 @@ test('TraceWrapper.traceFn should be able to trace a regular function', () => {
 
   m.__set__('tracer', mockGlobTracer)
 
-  const mockRequest = {} as unknown as Request
   const mockParentSpan = {
     context: () => undefined,
     finish: jest.fn(),
   }
-  const tw = new TracerWrapper({ req: mockRequest, span: mockParentSpan })
+  const tw = new TracerWrapper({ span: mockParentSpan })
 
   // tslint:disable-next-line: no-empty
   const someFunc = () => {}
@@ -132,7 +131,7 @@ test('TraceWrapper.traceFn should be able to trace a regular function', () => {
   expect(typeof tracedSomeFunc).toEqual('function')
   expect(typeof tracedTestFunc).toEqual('function')
   expect(someFunc.apply).toHaveBeenCalled()
-  expect(someFunc.apply).toHaveBeenCalledWith(tw, ['test', 'one'])
+  expect(someFunc.apply).toHaveBeenCalledWith(expect.anything(), ['test', 'one'])
   expect(testFunc).toHaveBeenCalled()
   expect(testFunc).toHaveBeenCalledWith('test', 'one')
   expect(mockGlobTracer.startSpan).toHaveBeenCalled()
@@ -183,7 +182,7 @@ test('TraceWrapper.traceFn should be able to trace a regular function with throw
   expect(mockParentSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
   expect(mockParentSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
   expect(mockParentSpan.log).toHaveBeenNthCalledWith(1, {
-    event: 'error',
+    event: 'error.message',
     message: 'Error: test',
   })
 
@@ -191,7 +190,7 @@ test('TraceWrapper.traceFn should be able to trace a regular function with throw
   expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
   expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
   expect(mockSubFnSpan.log).toHaveBeenNthCalledWith(1, {
-    event: 'error',
+    event: 'error.message',
     message: 'Error: test',
   })
 })
