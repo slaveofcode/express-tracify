@@ -231,4 +231,12 @@ test('TraceWrapper.traceFn should be able to trace a regular function with throw
     event: 'error',
     message: 'Error: test',
   })
+
+  expect(mockSubFnSpan.finish).toHaveBeenCalled()
+  expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(1, Tags.ERROR, true)
+  expect(mockSubFnSpan.setTag).toHaveBeenNthCalledWith(2, Tags.SAMPLING_PRIORITY, 1)
+  expect(mockSubFnSpan.log).toHaveBeenNthCalledWith(1, {
+    event: 'error',
+    message: 'Error: test',
+  })
 })
