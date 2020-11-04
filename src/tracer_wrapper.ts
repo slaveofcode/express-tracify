@@ -34,6 +34,7 @@ class TracerWrapper {
               if (t && t.__finishSpanWithErr) {
                 t.__finishSpanWithErr(err)
               }
+              throw err
             })
         }
 
@@ -136,6 +137,32 @@ const WrapHandler = (h: IMiddlewareFn, operationName: string): IMiddlewareFn => 
         : undefined,
     })
 
+    const proxiedResponseMethods = [
+      'json',
+      'jsonp',
+      'send',
+      'sendFile',
+      'sendStatus',
+      'end',
+      'render',
+      'redirect',
+    ]
+
+    const reny = (res as any)
+    for (const method of proxiedResponseMethods) {
+      const originMethod = reny[method]
+      reny[method] = ((...args: any[]) => {
+        spanSafeFinish(span)
+
+        // this preventing loop over the same method calls
+        // if this method re-called again
+        // on another libraries like hijackResponse
+        reny[method] = originMethod
+
+        originMethod.apply(res, args)
+      }) as any
+    }
+
     try {
       const parentWrapCaller = new TracerWrapper({ span })
       const expressArgs = [req, res, (arg: any) => {
@@ -160,8 +187,14 @@ const WrapHandler = (h: IMiddlewareFn, operationName: string): IMiddlewareFn => 
         return spanHandlerPromise(span, resp)
       }
 
-      spanSafeFinish(span)
-      return resp
+      if (resp) {
+        spanSafeFinish(span)
+        return resp
+      }
+
+      // no return value indicating the handler
+      // will call one of methods described on `proxiedResponseMethods`
+      // or just execute `next`
     } catch (err) {
       finishWithErr(err, span)
       throw err

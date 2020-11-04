@@ -1,3 +1,4 @@
+import { Request, Response, NextFunction } from 'express'
 import { Tags } from 'opentracing'
 import Rewire from 'rewire'
 
@@ -131,7 +132,7 @@ test('TraceWrapper.traceFn should be able to trace a regular function', () => {
   const tw = new TracerWrapper({ span: mockParentSpan })
 
   // tslint:disable-next-line: no-empty
-  const someFunc = () => {}
+  const someFunc = () => { }
   someFunc.apply = jest.fn()
   const tracedSomeFunc = tw.traceFn(someFunc, 'someFunc')
 
@@ -294,4 +295,97 @@ test('TraceWrapper.traceFn should be able to trace a rejected promise function',
       message: 'Error: test',
     })
   })
+})
+
+test('WrapHandler should return wrapped express handler', () => {
+  const m = Rewire('./tracer_wrapper')
+  const WrapHandler = m.__get__('WrapHandler')
+
+  const fn = (_req: Request, res: Response, _next: NextFunction) => {
+    return res.json({})
+  }
+
+  const wrappedFn = WrapHandler(fn)
+
+  expect(typeof wrappedFn).toEqual('function')
+})
+
+test('WrapHandler should start & finish span within response methods', () => {
+  const m = Rewire('./tracer_wrapper')
+  const WrapHandler = m.__get__('WrapHandler')
+
+  const resMethods = [
+    'json',
+    'jsonp',
+    'send',
+    'sendFile',
+    'sendStatus',
+    'end',
+    'render',
+    'redirect',
+  ]
+  for (const mtd of resMethods) {
+    const mockSpan: any = {
+      setTag: jest.fn(),
+      log: jest.fn(),
+    }
+
+    mockSpan.finish = jest.fn().mockImplementation(() => {
+      mockSpan.__duration = 999
+    })
+
+    const mockGlobTracer = {
+      startSpan: jest.fn().mockReturnValue(mockSpan),
+    }
+
+    m.__set__('tracer', mockGlobTracer)
+
+    const fn = (_req: Request, res: Response, _next: NextFunction) => {
+      return (res as any)[mtd]()
+    }
+    const wrappedFn = WrapHandler(fn)
+
+    expect(typeof wrappedFn).toEqual('function')
+
+    const mockReq = {}
+    const mockRes = {
+      json: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+      jsonp: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+      send: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+      sendStatus: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+      sendFile: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+      end: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+      render: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+      redirect: () => {
+        expect(mockGlobTracer.startSpan).toHaveBeenCalled()
+        expect(mockSpan.finish).toHaveBeenCalled()
+      },
+    }
+
+    // tslint:disable-next-line: no-empty
+    const mockNext = () => { }
+    wrappedFn(mockReq, mockRes, mockNext)
+  }
+
 })
