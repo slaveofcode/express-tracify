@@ -5,7 +5,7 @@ const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 const sleepExec = (milis, fn) => new Promise((res, rej) => setTimeout(() => res(fn()), milis))
 
 const getFromInventoryA = async function() {
-  const span = this.startSpan('subProcess')
+  const span = this.createChildSpan('subProcess')
   span.log({
     event: 'subProcess',
     message: 'create new child span'

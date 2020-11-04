@@ -31,8 +31,8 @@ class TracerWrapper {
         if (isPromise(resp)) {
           return spanHandlerPromise(span, resp)
             .catch(err => {
-              if (t && t.finishSpanWithErr) {
-                t.finishSpanWithErr(err)
+              if (t && t.__finishSpanWithErr) {
+                t.__finishSpanWithErr(err)
               }
             })
         }
@@ -41,8 +41,8 @@ class TracerWrapper {
         return resp
       } catch (err) {
         finishWithErr(err, span)
-        if (t && t.finishSpanWithErr) {
-          t.finishSpanWithErr(err)
+        if (t && t.__finishSpanWithErr) {
+          t.__finishSpanWithErr(err)
         }
         throw err
       }
@@ -53,7 +53,7 @@ class TracerWrapper {
     return this.parentSpan
   }
 
-  startSpan(operationName: string, options?: SpanOptions): Span {
+  createChildSpan(operationName: string, options?: SpanOptions): Span {
     const opts = {
       ...options,
       childOf: this.parentSpan.context(),
@@ -71,13 +71,13 @@ class TracerWrapper {
     return tracedFns
   }
 
-  finishSpan() {
+  __finishSpan() {
     if (this.parentSpan) {
       spanSafeFinish(this.parentSpan)
     }
   }
 
-  finishSpanWithErr(err: Error) {
+  __finishSpanWithErr(err: Error) {
     if (this.parentSpan) {
       finishWithErr(err, this.parentSpan)
     }
@@ -172,4 +172,5 @@ const WrapHandler = (h: IMiddlewareFn, operationName: string): IMiddlewareFn => 
 
 export {
   WrapHandler,
+  TracerWrapper,
 }

@@ -48,7 +48,7 @@ Router.get('/listing', WrapHandler(async function (req, res) {
     )
 
   const httpReqProducts = () => new Promise((resolve, reject) => {
-    const s = this.startSpan('http SVC-2 Products')
+    const s = this.createChildSpan('http SVC-2 Products')
     https.request({
       hostname: 'localhost',
       port: '8081',

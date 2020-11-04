@@ -104,7 +104,7 @@ test('should be able to create child span from TraceWrapper object', () => {
     context: jest.fn(),
   }
   const tw = new TracerWrapper({ span: mockSpan })
-  const childSpan = tw.startSpan('child')
+  const childSpan = tw.createChildSpan('child')
   expect(childSpan.constructor.name).toEqual('Span')
 })
 
