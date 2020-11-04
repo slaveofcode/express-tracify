@@ -9,7 +9,10 @@ import {
   middleware as Middleware,
   errMiddlewareWrapper as ErrMiddlewareWrapper,
 } from './middlewares'
-import { WrapHandler } from './tracer_wrapper'
+import {
+  WrapHandler,
+  TracerWrapper,
+} from './tracer_wrapper'
 
 interface ITracerOpts {
   config?: TracingConfig,
@@ -39,4 +42,5 @@ export {
   Middleware,
   ErrMiddlewareWrapper,
   WrapHandler,
+  TracerWrapper,
 }
