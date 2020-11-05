@@ -15,7 +15,7 @@ class TracerWrapper {
     this.parentSpan = span as Span
   }
 
-  traceFn(fn: Function, operationName?: string) {
+  traceFn(fn: Function, operationName?: string): () => any {
     const t = this
     // tslint:disable-next-line: only-arrow-functions
     return function () {
@@ -72,16 +72,57 @@ class TracerWrapper {
     return tracedFns
   }
 
-  __finishSpan() {
+  __finishSpan(): void {
     if (this.parentSpan) {
       spanSafeFinish(this.parentSpan)
     }
   }
 
-  __finishSpanWithErr(err: Error) {
+  __finishSpanWithErr(err: Error): void {
     if (this.parentSpan) {
       finishWithErr(err, this.parentSpan)
     }
+  }
+
+  setOperationName(name: string): Span {
+    return this.parentSpan.setOperationName(name)
+  }
+
+  setTag(key: string, val: any): Span {
+    return this.parentSpan.setTag(key, val)
+  }
+
+  log(keyValuePairs: { [key: string]: any }, timestamp?: number): Span {
+    return this.parentSpan.log(keyValuePairs, timestamp)
+  }
+
+  logEvent(eventName: string, payload: any): void {
+    this.parentSpan.logEvent(eventName, payload)
+  }
+
+  setTagPriority(val: number = 1): void {
+    this.parentSpan.setTag(Tags.SAMPLING_PRIORITY, val)
+  }
+
+  setTagError(errMsg?: string | Error): void {
+    this.parentSpan.setTag(Tags.ERROR, true)
+    this.parentSpan.setTag(Tags.SAMPLING_PRIORITY, 1)
+    this.parentSpan.log({
+      event: 'error.message',
+      message: errMsg
+        ? (errMsg instanceof Error
+            ? errMsg.message
+            : (['string', 'number'].includes(typeof errMsg) ? errMsg : ''))
+        : '',
+    })
+  }
+
+  setBaggageItem(key: string, value: string): Span {
+    return this.parentSpan.setBaggageItem(key, value)
+  }
+
+  getBaggageItem(key: string): string | undefined {
+    return this.parentSpan.getBaggageItem(key)
   }
 }
 
