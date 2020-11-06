@@ -6,6 +6,8 @@ import { middleware } from './middlewares'
 
 const { Init } = Main
 
+beforeEach(() => jest.clearAllMocks())
+
 const mockRequest = () => {
   return {
     headers: {},
