@@ -1,10 +1,15 @@
 // tslint:disable: ban-types
 import { Request, Response, NextFunction } from 'express'
 import { Span, Tags, globalTracer, SpanOptions } from 'opentracing'
+import cloneDeep from 'lodash.clonedeep'
 
 const tracer = globalTracer()
 
-type TraceFnArg = [fn: Function, operationName?: string]
+type TraceFnArg = [fn: Function, operationName?: string, opts?: TraceFnOptions]
+
+interface TraceFnOptions {
+  context?: any
+}
 
 const isPromise = (p: any): boolean => Boolean(p && p.then && typeof p.then === 'function')
 
@@ -15,7 +20,14 @@ class TracerWrapper {
     this.parentSpan = span as Span
   }
 
-  traceFn(fn: Function, operationName?: string): () => any {
+  /**
+   * Trace a function, this method will wrap the given function on the span start~>finish operation
+   * the function also will change the "this" context inside the function operation
+   * If the parameter context is given, the function will be called using the provided context
+   * @param fn function to trace
+   * @param operationName operation name or the function name
+   */
+  traceFn(fn: Function, operationName?: string, opts?: TraceFnOptions): () => any {
     const t = this
     // tslint:disable-next-line: only-arrow-functions
     return function () {
@@ -26,7 +38,19 @@ class TracerWrapper {
       const tracerWrapper = new TracerWrapper({ span })
 
       try {
-        const resp = fn.apply(tracerWrapper, Array.from(arguments))
+        /**
+         * If the context option is given
+         * the function call will using that context
+         * and inject $__tracer property on that context
+         */
+        let resp: any
+        if (opts?.context && typeof opts.context === 'object') {
+          const clonedCtx = cloneDeep(opts.context)
+          Object.assign(clonedCtx, { $__tracer: tracerWrapper })
+          resp = fn.apply(clonedCtx, Array.from(arguments))
+        } else {
+          resp = fn.apply(tracerWrapper, Array.from(arguments))
+        }
 
         if (isPromise(resp)) {
           return spanHandlerPromise(span, resp)
@@ -50,6 +74,15 @@ class TracerWrapper {
     }
   }
 
+  /**
+   * Trace a function using traceFn and immediatelly executed
+   * @param fn function to immediatelly executed
+   * @param operationName operation name or the function name
+   */
+  traceFnExec(fn: Function, operationName?: string, opts?: TraceFnOptions) {
+    return this.traceFn(fn, operationName, opts).apply(this)
+  }
+
   getSpan(): Span {
     return this.parentSpan
   }
@@ -65,8 +98,8 @@ class TracerWrapper {
 
   traceFns(fns: TraceFnArg[]): Function[] {
     const tracedFns: Function[] = []
-    for (const [fn, operationName] of fns) {
-      tracedFns.push(this.traceFn(fn, operationName))
+    for (const [fn, operationName, opts] of fns) {
+      tracedFns.push(this.traceFn(fn, operationName, opts))
     }
 
     return tracedFns
@@ -111,8 +144,8 @@ class TracerWrapper {
       event: 'error.message',
       message: errMsg
         ? (errMsg instanceof Error
-            ? errMsg.message
-            : (['string', 'number'].includes(typeof errMsg) ? errMsg : ''))
+          ? errMsg.message
+          : (['string', 'number'].includes(typeof errMsg) ? errMsg : ''))
         : '',
     })
   }
@@ -237,6 +270,8 @@ const WrapHandler = (h: IMiddlewareFn, operationName: string): IMiddlewareFn => 
       // will call one of methods described on `proxiedResponseMethods`
       // or just execute `next`
     } catch (err) {
+      // tslint:disable-next-line: no-console
+      console.log('WrapHandler -> err', err)
       finishWithErr(err, span)
       throw err
     }

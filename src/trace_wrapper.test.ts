@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express'
 import { Tags } from 'opentracing'
 import Rewire from 'rewire'
+// import { TracerWrapper } from './tracer_wrapper'
+
+afterEach(() => jest.clearAllMocks())
 
 test('spanSafeFinish should be able to detect finish calling before', () => {
   const m = Rewire('./tracer_wrapper')
@@ -387,5 +390,168 @@ test('WrapHandler should start & finish span within response methods', () => {
     const mockNext = () => { }
     wrappedFn(mockReq, mockRes, mockNext)
   }
+})
 
+test('traceFn should trace the given function', () => {
+  const m = Rewire('./tracer_wrapper')
+  const WrapHandler = m.__get__('WrapHandler')
+
+  const mockMiddlewareSpan: any = {
+    context: jest.fn(),
+  }
+
+  mockMiddlewareSpan.finish = jest.fn().mockImplementation(() => {
+    mockMiddlewareSpan.__duration = 999
+  })
+
+  const mockTracerWrapperSpan: any = {
+    context: jest.fn(),
+    setTag: jest.fn(),
+    finish: jest.fn(),
+    log: jest.fn(),
+  }
+
+  const mockGlobTracer = {
+    startSpan: jest.fn()
+      .mockReturnValueOnce(mockMiddlewareSpan) // will be called on WrapHandler
+      .mockReturnValueOnce(mockTracerWrapperSpan), // will be called on TracerWrapper.traceFn
+  }
+
+  m.__set__('tracer', mockGlobTracer)
+
+  const exampleFn = jest.fn().mockReturnValue('Hello World!')
+
+  function middlewareFn(this: any, _req: Request, _res: Response, _next: NextFunction) {
+    const tracedFn = this.traceFn(exampleFn)
+    const res = tracedFn()
+    _res.json({ ok: true })
+
+    expect(res).toEqual('Hello World!')
+    expect(this.getSpan().finish).toHaveBeenCalled()
+  }
+
+  const mockRes = { json: jest.fn() }
+
+  WrapHandler(middlewareFn)({}, mockRes, jest.fn())
+
+  expect(exampleFn).toHaveBeenCalled()
+  expect(mockGlobTracer.startSpan).toHaveBeenNthCalledWith(1, middlewareFn.name, { childOf: undefined })
+  expect(mockGlobTracer.startSpan).toHaveBeenNthCalledWith(2, exampleFn.name, { childOf: undefined })
+  expect(mockMiddlewareSpan.finish).toHaveBeenCalled()
+  expect(mockTracerWrapperSpan.finish).toHaveBeenCalled()
+})
+
+test('traceFnExec should immediately execute the trace function', () => {
+  const m = Rewire('./tracer_wrapper')
+  const WrapHandler = m.__get__('WrapHandler')
+
+  const mockMiddlewareSpan: any = {
+    context: jest.fn(),
+  }
+
+  mockMiddlewareSpan.finish = jest.fn().mockImplementation(() => {
+    mockMiddlewareSpan.__duration = 999
+  })
+
+  const mockTracerWrapperSpan: any = {
+    context: jest.fn(),
+    setTag: jest.fn(),
+    finish: jest.fn(),
+    log: jest.fn(),
+  }
+
+  const mockGlobTracer = {
+    startSpan: jest.fn()
+      .mockReturnValueOnce(mockMiddlewareSpan) // will be called on WrapHandler
+      .mockReturnValueOnce(mockTracerWrapperSpan), // will be called on TracerWrapper.traceFn
+  }
+
+  m.__set__('tracer', mockGlobTracer)
+
+  const exampleFn = jest.fn().mockReturnValue('Hello World!')
+
+  function middlewareFn(this: any, _req: Request, _res: Response, _next: NextFunction) {
+    return this.traceFnExec(exampleFn)
+  }
+
+  const result = WrapHandler(middlewareFn)({}, {}, jest.fn())
+
+  expect(exampleFn).toHaveBeenCalled()
+  expect(result).toEqual('Hello World!')
+  expect(mockGlobTracer.startSpan).toHaveBeenNthCalledWith(1, middlewareFn.name, { childOf: undefined })
+  expect(mockGlobTracer.startSpan).toHaveBeenNthCalledWith(2, exampleFn.name, { childOf: undefined })
+  expect(mockMiddlewareSpan.finish).toHaveBeenCalled()
+  expect(mockTracerWrapperSpan.finish).toHaveBeenCalled()
+})
+
+test('traceFn should be able to call function with given context', () => {
+  const m = Rewire('./tracer_wrapper')
+  const TracerWrapper = m.__get__('TracerWrapper')
+  const WrapHandler = m.__get__('WrapHandler')
+
+  const mockMiddlewareSpan: any = {
+    context: jest.fn(),
+  }
+
+  mockMiddlewareSpan.finish = jest.fn().mockImplementation(() => {
+    mockMiddlewareSpan.__duration = 999
+  })
+
+  const mockTracerWrapperSpan: any = {
+    context: jest.fn(),
+    setTag: jest.fn(),
+    finish: jest.fn(),
+    log: jest.fn(),
+  }
+
+  const mockGlobTracer = {
+    startSpan: jest.fn()
+      .mockReturnValueOnce(mockMiddlewareSpan) // will be called on WrapHandler
+      .mockReturnValueOnce(mockTracerWrapperSpan), // will be called on TracerWrapper.traceFn
+  }
+
+  m.__set__('tracer', mockGlobTracer)
+
+  class XOperation {
+    operationName: string
+    secretOperations: string[]
+
+    constructor(name: string) {
+      this.operationName = name
+      this.secretOperations = []
+    }
+
+    secretOperation(operation: string) {
+      this.secretOperations.push(operation)
+      // tslint:disable-next-line: no-string-literal
+      expect((this as any)['$__tracer']).not.toEqual(undefined)
+      // tslint:disable-next-line: no-string-literal
+      expect((this as any)['$__tracer'] instanceof TracerWrapper).toEqual(true)
+      return this.flush()
+    }
+
+    flush() {
+      return {
+        operation: this.operationName,
+        secrets: this.secretOperations,
+      }
+    }
+  }
+
+  function middlewareFn(this: any, _req: Request, _res: Response, _next: NextFunction) {
+    const xOps = new XOperation('Poop')
+
+    const tracedOps = this.traceFn(xOps.secretOperation, 'xOps.secretOperation', {
+      context: xOps,
+    })
+
+    return tracedOps('dummy')
+  }
+
+  const result = WrapHandler(middlewareFn)({}, {}, jest.fn())
+
+  expect(result).toEqual({
+    operation: 'Poop',
+    secrets: ['dummy'],
+  })
 })

@@ -42,9 +42,7 @@ const getListProducts = async function() {
 }
 
 Router.get('/products', WrapHandler(async function ListProducts(req, res) {
-  const TGetListProducts = this.traceFn(getListProducts)
-
-  const products = await TGetListProducts()
+  const products = await this.traceFnExec(getListProducts)
   console.log("ListProducts -> products", products)
 
   res.json({

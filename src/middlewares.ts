@@ -55,6 +55,11 @@ const middleware = (cfg?: IMiddlewareConfig) => {
   }
 
   return (req: Request, res: Response, next: NextFunction) => {
+    // if dissabled just skip the process
+    if (process.env.JAEGER_DISABLED) {
+      return next()
+    }
+
     const span = startSpanFromCtx(req.path, req.headers)
     res.on('finish', makeFinish(span, req, res, cfg?.errorResolverFn))
 
@@ -91,6 +96,11 @@ const middleware = (cfg?: IMiddlewareConfig) => {
 
 const errMiddlewareWrapper = (errMiddlewareFn: IErrorMiddlewareFn) => {
   return (err: any, req: Request, res: Response, next: NextFunction) => {
+    // skip operation on disabled state
+    if (process.env.JAEGER_DISABLED) {
+      return errMiddlewareFn.apply(null, [err, req, res, next])
+    }
+
     const { opentracing } = req as any
     if (isInit() && opentracing.span && opentracing.span instanceof Span) {
       const { span } = opentracing
