@@ -38,6 +38,28 @@ Router.get('/', WrapHandler(function (_, _, next) {
 
 Router.get('/home', Home)
 
+class Person {
+  name;
+  
+  constructor(name) {
+    this.name = name
+  }
+
+  sayName() {
+    return `Hi ${this.name}`
+  }
+};
+
+Router.get('/hello/:name', WrapHandler(function(req, res){
+  const p = new Person(req.params.name)
+
+  const sayPersonName = this.traceFn(p.sayName, 'Person: sayName', { context: p })
+
+  res.json({
+    greeting: sayPersonName()
+  })
+}, 'Person: Hello'))
+
 Router.get('/listing', WrapHandler(async function (req, res) {
   const requestHeaders = {}
   globalTracer()
