@@ -1,6 +1,6 @@
 {
   "name": "express-tracify",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Middleware & utility to support tracing with jaeger & opentracing on ExpressJs",
   "main": "index.js",
   "scripts": {
