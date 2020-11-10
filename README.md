@@ -224,4 +224,4 @@ Get baggage item on the current trace context
 - `key`: **String** key or the name of baggage item
 
 ### Examples
-You can take a look at [example](https://github.com/usetada/express-tracify/tree/main/example) folder to see full implementations
+You can take a look at [example](https://github.com/slaveofcode/express-tracify/tree/main/example) folder to see full implementations
