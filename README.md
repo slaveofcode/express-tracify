@@ -6,6 +6,15 @@ Library to support tracing with jaeger &amp; opentracing on NodeJs with ExpressJ
 3. Manual trace function
 
 ### Installation
+
+#### NPM
+
+```
+$ npm i express-tracify
+```
+
+#### Init & Middleware Configuration
+
 The example code below is using configuration via a direct parameter on the `Init` function, however, you can also use *Environment Variables* to set them. 
 
 This library using [jaeger-client-node](https://github.com/jaegertracing/jaeger-client-node) and [opentracing](https://github.com/opentracing/opentracing-javascript) on the implementation, so the parameter for *config* or *options* is also the same.
