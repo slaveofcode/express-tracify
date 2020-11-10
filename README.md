@@ -161,18 +161,18 @@ WrapHandler(handler() {
 #### TracerWrapper
 Base class for tracing functions
 
-#### TracerWrapper.traceFn(fn, operationName, opts?: {context: Object })
+#### .traceFn(fn, operationName, opts?: {context: Object })
 Will return new traced function that ready to execute.
 - `fn`: **Function** handler or function to trace (required)
 - `operationName`: **String** Custom operation name, if not supplied will use `[TheFunction].name` value, or empty ("")
 - `opts`: **Object** Options to pass
   - `context` **Object** the custom context to pass on `function.apply` calls
 
-#### TracerWrapper.traceFnExec(fn, operationName, opts)
+#### .traceFnExec(fn, operationName, opts)
 Same as `.traceFn` but will immediatelly execute the given function on `fn` param.
 
 
-#### TracerWrapper.traceFns(fns)
+#### .traceFns(fns)
 Will return multiple traced functions, the order is based on the given functions parameter
 - `fns`: **Array** array of parameter of `.traceFn`, the shorthand for creating multiple traced functions.
 
@@ -184,44 +184,44 @@ const [tracedFn1, tracedFn2] = this.traceFns([
 ])
 ```
 
-#### TracerWrapper.getSpan()
+#### .getSpan()
 Will return the current span object in the current context
 
-#### TracerWrapper.createChildSpan(operationName, options)
+#### .createChildSpan(operationName, options)
 Create new child span, based on the current span context
 - `operationName`: **String** Operation name of new child span
 - `options`: **Object** options to be assigned on `tracer.startSpan` execution (optional)
 
-#### TracerWrapper.setOperationName(name)
+#### .setOperationName(name)
 Set custom operation name on the current span context
 - `name`: **String** the name of operation
 
-#### TracerWrapper.setTag(key, val)
+#### .setTag(key, val)
 Set opentracing Tag
 - `key`: **String** Key name, refers to Opentracing.Tags
 - `val`: **Any** value of the key tag
 
-#### TracerWrapper.log(keyValuePairs, timestamp?: number)
+#### .log(keyValuePairs, timestamp?: number)
 Set logging value
 - `keyValuePairs`: **Object{key: string, val: Any}** Key-Value pair of logging event
 - `timestamp`: **Number** The timestamp in milliseconds since the Unix epoch (optional)
 
-#### TracerWrapper.setTagPriority(priorityNumber = 1)
+#### .setTagPriority(priorityNumber = 1)
 An alias for setting tag priority on `Tags.SAMPLING_PRIORITY`, by default 1 (priority)
 - `priorityNumber`: **Number** the value of sampling priority **1** menas always captured
 
-#### TracerWrapper.setTagError(errMsg)
+#### .setTagError(errMsg)
 Shorthand for easily create tag error and set sampling priority to 1
 - `errMsg`: **String | Error** error message as a string or error object
 
-#### TracerWrapper.setBaggageItem(key, value)
+#### .setBaggageItem(key, value)
 Set baggage item on the current trace context
 - `key`: **String** key or the name of baggage item
 - `value`: **String** the value of baggage item
 
-#### TracerWrapper.getBaggageItem(key)
+#### .getBaggageItem(key)
 Get baggage item on the current trace context
 - `key`: **String** key or the name of baggage item
 
 ### Examples
-You can take a look at [example](./example) folder to see full implementations
+You can take a look at [example](https://github.com/usetada/express-tracify/tree/main/example) folder to see full implementations
