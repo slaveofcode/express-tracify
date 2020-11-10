@@ -1,8 +1,8 @@
 {
   "name": "express-tracify",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Middleware & utility to support tracing with jaeger & opentracing on ExpressJs",
-  "main": "dist/index.js",
+  "main": "index.js",
   "scripts": {
     "lint": "tslint --project tsconfig.json",
     "lint:fix": "tslint --project tsconfig.json --fix",
