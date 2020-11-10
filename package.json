@@ -1,0 +1,56 @@
+{
+  "name": "express-tracify",
+  "version": "0.1.0",
+  "description": "Middleware & utility to support tracing with jaeger & opentracing on ExpressJs",
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "tslint --project tsconfig.json",
+    "lint:fix": "tslint --project tsconfig.json --fix",
+    "test": "NODE_ENV='test' ts-node -O '{\"module\":\"commonjs\"}' node_modules/jest/bin/jest.js",
+    "coverage": "NODE_ENV='test' jest --coverage"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slaveofcode/express-tracify.git"
+  },
+  "keywords": [
+    "express",
+    "jaeger",
+    "opentracing",
+    "middleware",
+    "tracing",
+    "tracer",
+    "span"
+  ],
+  "author": "Aditya Kresna Permana",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/slaveofcode/express-tracify/issues"
+  },
+  "homepage": "https://github.com/slaveofcode/express-tracify#readme",
+  "devDependencies": {
+    "@types/express": "^4.17.8",
+    "@types/jaeger-client": "^3.15.4",
+    "@types/jest": "^26.0.15",
+    "@types/lodash.clonedeep": "^4.5.6",
+    "@types/rewire": "^2.5.28",
+    "express": "^4.17.1",
+    "husky": "^4.3.0",
+    "jest": "^26.6.1",
+    "rewire": "^5.0.0",
+    "ts-jest": "^26.4.3",
+    "ts-node": "^9.0.0",
+    "tslint": "^6.1.3",
+    "typescript": "^4.0.5"
+  },
+  "dependencies": {
+    "jaeger-client": "^3.18.1",
+    "lodash.clonedeep": "^4.5.0",
+    "opentracing": "^0.14.4"
+  }
+}
