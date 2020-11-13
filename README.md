@@ -208,7 +208,7 @@ Set logging value
 
 #### .setTagPriority(priorityNumber = 1)
 An alias for setting tag priority on `Tags.SAMPLING_PRIORITY`, by default 1 (priority)
-- `priorityNumber`: **Number** the value of sampling priority **1** menas always captured
+- `priorityNumber`: **Number** the value of sampling priority **1** means always captured
 
 #### .setTagError(errMsg)
 Shorthand for easily create tag error and set sampling priority to 1
