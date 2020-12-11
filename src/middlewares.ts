@@ -102,7 +102,7 @@ const errMiddlewareWrapper = (errMiddlewareFn: IErrorMiddlewareFn) => {
     }
 
     const { opentracing } = req as any
-    if (isInit() && opentracing.span && opentracing.span instanceof Span) {
+    if (isInit() && opentracing && opentracing.span && opentracing.span instanceof Span) {
       const { span } = opentracing
       span.setTag(Tags.SAMPLING_PRIORITY, 1)
       span.setTag(Tags.ERROR, true)
